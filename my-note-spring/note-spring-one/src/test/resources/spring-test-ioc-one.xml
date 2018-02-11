@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+    <bean id="user" class="com.laolang.notespring.domain.User">
+        <property name="id" value="1001" />
+        <property name="userCode" value="u1001" />
+        <property name="nickName" value="小代码" />
+        <property name="pwd" value="123456" />
+    </bean>
+
+    <bean id="user2" class="com.laolang.notespring.domain.User">
+        <constructor-arg index="0" value="1002" />
+        <constructor-arg index="1" value="老狼" />
+        <constructor-arg index="2" value="23" />
+    </bean>
+
+
+    <!-- 无参的静态工厂注入 -->
+    <bean id="user3" class="com.laolang.notespring.factory.UserStaticFactory" factory-method="createUser" />
+    <!-- 带参数的静态工厂注入 -->
+    <bean id="user4" class="com.laolang.notespring.factory.UserStaticFactory" factory-method="createUser">
+        <constructor-arg index="0" value="1004" />
+        <constructor-arg index="1" value="xiaodaima" />
+    </bean>
+
+    <!-- 工厂类 -->
+    <bean id="userFactory" class="com.laolang.notespring.factory.UserFactory" />
+    <!-- 无参工厂方法注入 -->
+    <bean id="user5" factory-bean="userFactory" factory-method="createUser" />
+    <!-- 带参数的工厂方法注入 -->
+    <bean id="user6" factory-bean="userFactory" factory-method="createUser">
+        <constructor-arg index="0" value="1004" />
+        <constructor-arg index="1" value="xiaodaima" />
+    </bean>
+
+    <bean id="userInfo" class="com.laolang.notespring.domain.UserInfo">
+        <property name="id" value="1001" />
+        <property name="userId" value="1001" />
+        <property name="info" value="user info" />
+    </bean>
+
+    <bean id="user7" class="com.laolang.notespring.domain.User" >
+        <property name="id" value="1001" />
+        <property name="userCode" value="u1001" />
+        <property name="userInfo" ref="userInfo" />
+    </bean>
+
+    <bean id="user8" class="com.laolang.notespring.domain.User">
+        <property name="id" value="1001" />
+        <property name="userCode" value="u1001" />
+        <property name="userInfo"><null /></property>
+    </bean>
+
+    <bean id="user9" class="com.laolang.notespring.domain.User">
+        <property name="id" value="1001" />
+        <property name="userCode" value="u1001" />
+        <property name="info.userId" value="1001" />
+        <property name="info.id" value="1001" />
+        <property name="info.info" value="user info" />
+    </bean>
+
+    <bean id="user10" class="com.laolang.notespring.domain.User">
+        <property name="infoList">
+            <list>
+                <value>info one</value>
+                <value>info two</value>
+                <value>info three</value>
+            </list>
+        </property>
+    </bean>
+
+    <bean id="user11" class="com.laolang.notespring.domain.User">
+        <property name="infoSet">
+            <set>
+                <value>info set one</value>
+                <value>info set two</value>
+                <value>info set three</value>
+            </set>
+        </property>
+    </bean>
+
+    <bean id="user12" class="com.laolang.notespring.domain.User">
+        <property name="infoMap">
+            <bean class="java.util.HashMap">
+                <constructor-arg>
+                    <map>
+                        <entry key="info1" value="info map one" />
+                        <entry key="info2" value="info map two" />
+                        <entry key="info3" value="info map three" />
+                    </map>
+                </constructor-arg>
+            </bean>
+        </property>
+    </bean>
+
+    <bean id="user13" class="com.laolang.notespring.domain.User">
+        <property name="emails">
+            <props>
+                <prop key="jobMail">job@163.com</prop>
+                <prop key="lifeMail">life@163.com</prop>
+            </props>
+        </property>
+    </bean>
+
+    <bean id="user14" class="com.laolang.notespring.domain.User" abstract="true">
+        <property name="infoList">
+            <list>
+                <value>info one</value>
+                <value>info two</value>
+                <value>info three</value>
+            </list>
+        </property>
+    </bean>
+    <bean id="user15" parent="user14">
+        <property name="infoList">
+            <list merge="true">
+                <value>info four</value>
+                <value>info five</value>
+            </list>
+        </property>
+    </bean>
+    <bean id="user16" parent="user14">
+        <property name="infoList">
+            <list merge="false">
+                <value>info four</value>
+                <value>info five</value>
+            </list>
+        </property>
+    </bean>
+
+    <util:list id="infolist" list-class="java.util.ArrayList">
+        <value>info one</value>
+        <value>info two</value>
+        <value>info three</value>
+    </util:list>
+
+    <bean id="user17" class="com.laolang.notespring.domain.User">
+        <property name="infoList" ref="infolist" />
+    </bean>
+
+    <bean id="user18" class="com.laolang.notespring.domain.User">
+        <property name="infoList">
+            <util:list list-class="java.util.ArrayList">
+                <value>info one</value>
+                <value>info two</value>
+                <value>info three</value>
+            </util:list>
+        </property>
+    </bean>
+</beans>
