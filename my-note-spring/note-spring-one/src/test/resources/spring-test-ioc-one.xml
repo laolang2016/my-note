@@ -149,4 +149,22 @@
             </util:list>
         </property>
     </bean>
+
+    <bean id="userEmail" class="com.laolang.notespring.domain.UserEmail" scope="prototype">
+        <property name="id" value="1001" />
+        <property name="userId" value="1001" />
+        <property name="email" value="xiaodaima@163.com" />
+    </bean>
+
+    <bean id="userEmailLookup" class="com.laolang.notespring.domain.UserEmailLookup">
+        <lookup-method name="getUserEmail" bean="userEmail" />
+    </bean>
+
+    <bean id="userEmailLookupByAware" class="com.laolang.notespring.domain.UserEmailLookupByAware" />
+
+    <bean id="user19" class="com.laolang.notespring.factory.UserFactoryBean">
+        <property name="userInfo" value="1001,u1001,xiaodaima" />
+    </bean>
+
+
 </beans>

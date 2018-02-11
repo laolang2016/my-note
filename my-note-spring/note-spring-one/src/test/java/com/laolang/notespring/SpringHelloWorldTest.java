@@ -1,6 +1,11 @@
 package com.laolang.notespring;
 
 import com.laolang.notespring.domain.User;
+import com.laolang.notespring.domain.UserEmail;
+import com.laolang.notespring.domain.UserEmailLookup;
+import com.laolang.notespring.domain.UserEmailLookupByAware;
+import com.laolang.notespring.factory.UserFactoryBean;
+import com.laolang.notespring.po.Student;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.springframework.context.ApplicationContext;
@@ -288,4 +293,42 @@ public class SpringHelloWorldTest {
             }
         }
     }
+
+    @Test
+    public void lookUpTest(){
+        UserEmailLookup userEmailLookup = (UserEmailLookup) context.getBean("userEmailLookup");
+        UserEmail email1 = userEmailLookup.getUserEmail();
+        UserEmail email2 = userEmailLookup.getUserEmail();
+        assertEquals(false,email1 == email2 );
+    }
+
+    @Test
+    public void lookUpByAwareTest(){
+        UserEmailLookupByAware userEmailLookupByAware = (UserEmailLookupByAware) context.getBean("userEmailLookupByAware");
+        UserEmail email1 = userEmailLookupByAware.getUserEmail();
+        UserEmail email2 = userEmailLookupByAware.getUserEmail();
+        assertEquals(false,email1 == email2 );
+    }
+
+    @Test
+    public void factoryBeanTest() throws Exception {
+        User user = (User) context.getBean("user19");
+        User user2 = (User) context.getBean("user19");
+        assertNotNull(user);
+        assertNotNull(user2);
+        assertEquals(true , user == user2 );
+        // 获得对应的 FactoryBean 实例
+        UserFactoryBean userFactoryBean = (UserFactoryBean) context.getBean("&user19");
+        User user3 = userFactoryBean.getObject();
+        assertNotNull(user3);
+        // 此时手动调用则每次返回一个新的实例
+        assertEquals(false , user == user3 );
+    }
+
+    @Test
+    public void componetTest(){
+        Student student = context.getBean(Student.class);
+        assertNotNull(student);
+    }
 }
+

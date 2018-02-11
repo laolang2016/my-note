@@ -888,3 +888,144 @@ util:list和util:set支持value-type属性，指定集合中值的类型
 
 util:map支持key-type和value-type属性，指定map的键和值的类型
 
+## 方法注入
+
+方法注入主要解决：通过一个singleton Bean获取一个prototype Bean时使用
+
+```xml
+<bean id="userEmail" class="com.laolang.notespring.domain.UserEmail" scope="prototype">
+    <property name="id" value="1001" />
+    <property name="userId" value="1001" />
+    <property name="email" value="xiaodaima@163.com" />
+</bean>
+
+<bean id="userEmailLookup" class="com.laolang.notespring.domain.UserEmailLookup">
+    <lookup-method name="getUserEmail" bean="userEmail" />
+</bean>
+```
+
+以上配置与下面代码效果相同
+
+```java
+package com.laolang.notespring.domain;
+
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+
+public class UserEmailLookupByAware implements ApplicationContextAware {
+
+    private ApplicationContext context;
+
+    public UserEmail getUserEmail(){
+        return (UserEmail) context.getBean("userEmail");
+    }
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.context = applicationContext;
+    }
+}
+
+```
+
+注意：由于方法注入时spring需要用到CGLIB类包，所以需要加入相应的maven依赖
+
+```xml
+<dependency>
+    <groupId>cglib</groupId>
+    <artifactId>cglib</artifactId>
+    <version>${cglib.versoin}</version>
+</dependency>
+```
+
+## bean 之间依赖关系
+
+### 继承
+
+通过 bean 的 abstract 和 parent 属性
+
+### 以来
+
+如果没有使用ref建立对其他bean的依赖关系，那么可以通过bean的depends-on属性来指定依赖关系，保证所依赖的bean在该bean实例化之前创建好。可以如果依赖多个，则可以通过逗号、空格或分号分隔
+
+
+
+## FactoryBean
+
+如果bean的实例化比较复杂，使用传统的配置方式不够灵活，则可以通过编码的方式实现，需要实现`org.springframework.beans.factory.FactoryBean`工厂类接口
+
+factorybean 实现类 
+
+```java
+package com.laolang.notespring.factory;
+
+import com.laolang.notespring.domain.User;
+import org.springframework.beans.factory.FactoryBean;
+
+public class UserFactoryBean implements FactoryBean<User> {
+
+    public String getUserInfo() {
+        return userInfo;
+    }
+
+    // 接收逗号分隔的属性值
+    public void setUserInfo(String userInfo) {
+        this.userInfo = userInfo;
+    }
+
+    private String userInfo;
+
+    // 实例化 bean
+    @Override
+    public User getObject() throws Exception {
+        User user = new User();
+        String[] infos = userInfo.split(",");
+        user.setId(Integer.valueOf(infos[0]));
+        user.setUserCode(infos[1]);
+        user.setNickName(infos[2]);
+        return user;
+    }
+
+    // 返回 bean 类型
+    @Override
+    public Class<?> getObjectType() {
+        return User.class;
+    }
+
+    // 通过该标示确定是否为单利
+    @Override
+    public boolean isSingleton() {
+        return true;
+    }
+}
+
+```
+
+xml 配置 
+
+```xml
+<bean id="user19" class="com.laolang.notespring.factory.UserFactoryBean">
+    <property name="userInfo" value="1001,u1001,xiaodaima" />
+</bean>
+```
+
+测试
+
+```java
+@Test
+public void factoryBeanTest() throws Exception {
+    User user = (User) context.getBean("user19");
+    User user2 = (User) context.getBean("user19");
+    assertNotNull(user);
+    assertNotNull(user2);
+    assertEquals(true , user == user2 );
+    // 获得对应的 FactoryBean 实例
+    UserFactoryBean userFactoryBean = (UserFactoryBean) context.getBean("&user19");
+    User user3 = userFactoryBean.getObject();
+    assertNotNull(user3);
+    // 此时手动调用则每次返回一个新的实例
+    assertEquals(false , user == user3 );
+}
+```
+
