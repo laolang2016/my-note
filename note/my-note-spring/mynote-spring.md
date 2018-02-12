@@ -1145,6 +1145,12 @@ context:excude-filter
 
 ## 基于groovy配置
 
+## 通过编码方式动态添加bean
+
+### 扩展自定义标签
+
+
+
 ## 读取外部属性文件
 
 ### 基本使用
@@ -1273,4 +1279,407 @@ public class DbInfo {
 ## 容器事件
 
 # aop 基础
+
+## aop 概述 
+
+aop是Aspect Oriented Programming的简称。aop 是有特定的应用场合的，它只适合那些具有横切逻辑的应用场合，如性能监控、访问控制、事务管理及日志记录。
+
+## aop 术语
+
+1. 连接点(Joinpoint)
+
+特定点是程序执行的某个特定位置，如类开始初始化前、类初始化后、类的某个方法调用前/电泳后、方法抛出异常后。一个类或一段程序代码拥有的一些具有便捷性质的特定点，这些代码中的特定点就被称为链接点。
+
+**spring仅支持方法的链接点，即仅能在方法调用前、方法调用后、方法跑出异常时及方法调用前后这些程序执行点织入增强。**
+
+连接点由两个信息确定：
+
+* 用方法表示的程序执行点
+* 用相对位置表示的方位
+
+spring 使用切点对执行点进行定位，而方位则在增强类型中定义
+
+2. 切点(Pointcut)
+
+每个程序类都拥有多个链接点，如一个拥有两个方法的类，则者两个方法都是连接点。aop通过切点定位特定的连接点。如果把连接点比作数据库中的数据，那么切点就相当于查询条件。切点和连接点是一对多的关系。
+
+在spring中，切点通过`org.springframework.aop.Pointcut`接口描述，它使用类和方法作为连接点的查询条件，spring aop 的规则解析引擎负责解析切点所设定的查询条件，找到对应的连接点。
+
+切点只能定位到某个方法上，如果希望定位到具体的连接点上，还需要提供方位信息。
+
+3. 增强(Advice)
+
+增强是织入目标类连接点上的一段程序代码。
+
+在spring中，增强除用于描述一段程序代码外，还拥有另一个和连接点相关的信息：执行点的方位。结合执行点的方位信息和切点信息，就可以找到特定的链接。
+
+4. 目标对象(Target)
+
+增强逻辑的织入目标类。
+
+5. 引介(Introduction)
+
+引介是一种特殊的增强，它为类添加一些属性和方法。
+
+6. 织入(Weaving)
+
+织入是将增强添加到目标类的具体连接点上的过程。
+
+aop的织入方式
+
+* 编译期织入，者要求使用特殊的java编译器
+* 类装载期织入，者要求使用特殊的类装载器
+* 动态代理织入，在运行期为目标类添加增强生成子类的方式
+
+**spring 采用动态代理织入，AspectJ采用编译期织入和类装载期织入**
+
+7. 代理(Proxy)
+
+一个类被aop织入增强后，就产生了一个结果类，它是融合了原类和增强逻辑的代理类。
+
+根据不同的代理方式，代理类既可能是和原类具有相同接口的类，也可能是原类的子类，所以可以采用与调用原类相同的方式调用代理类。
+
+8. 切面(Aspect)
+
+切面由切点和增强（引介）组成，既包括横切的逻辑定义，也包括连接点的定义。
+
+spring aop 就是负责实施切面的框架，它将切面所定义的横切逻辑织入切面所指定的连接点中。
+
+aop 的工作中心在于如何将增强应用与目标对象的链接点上。者包括两项工作：
+
+* 如何通过切点和增强定位到连接点上
+* 如何在增强中编写切面的代码
+
+## aop 的实现者
+
+1. AspectJ
+
+http://www.eclipse.org.aspectj
+
+2. AspectWerkz
+3. JBoss AOP
+
+http://www.jboss.org/products/aop
+
+4. Spring SOP
+
+## 基础知识
+
+spring aop使用了两种代理机制
+
+* 基于JDK的动态代理
+* 基于CGLIB的动态代理
+
+原因：JDK本身只提供接口的代理，而不支持类的代理
+
+### 带横切逻辑的实例
+
+接口类
+
+```java
+package com.laolang.notespring.aopone;
+
+public interface ForumService {
+
+    void removeTopic( int topicId );
+
+    void removeForum( int forumId );
+}
+
+```
+
+实现类
+
+```java
+package com.laolang.notespring.aopone;
+
+public class ForumServiceImpl implements ForumService{
+    @Override
+    public void removeTopic(int topicId) {
+        // 开始对该方法进行性能监视
+        PerformanceMonitor.begin("com.laolang.notespring.aopone.ForumServiceImpl. removeTopic");
+        System.out.println("模拟删除Topic记录："+topicId);
+        try{
+            Thread.currentThread().sleep(20);
+        }catch (Exception e){
+            throw new RuntimeException(e);
+        }
+        // 结束对该方法的性能监视
+        PerformanceMonitor.end();
+    }
+
+    @Override
+    public void removeForum(int forumId) {
+        PerformanceMonitor.begin("com.laolang.notespring.aopone.ForumServiceImpl. removeForum");
+        System.out.println("模拟删除Forum记录："+forumId);
+        try{
+            Thread.currentThread().sleep(20);
+        }catch (Exception e){
+            throw new RuntimeException(e);
+        }
+        PerformanceMonitor.end();
+
+    }
+}
+
+```
+
+性能监视类
+
+```java
+package com.laolang.notespring.aopone;
+
+/**
+ * 性能监视实现类
+ */
+public class PerformanceMonitor {
+
+    // 通过一个ThreadLocal保存与调用线程相关的性能监视信息
+    private static ThreadLocal<MethodPerformance> performanceThreadLocal = new ThreadLocal<MethodPerformance>();
+
+    // 自动对某一目标方法的性能监视
+    public static void begin(String method ){
+        System.out.println("begin monitor...");
+        MethodPerformance mp = new MethodPerformance(method);
+        performanceThreadLocal.set(mp);
+    }
+
+    public static void end(){
+        System.out.println("end monitor...");
+        MethodPerformance mp = performanceThreadLocal.get();
+        mp.printPerformance();
+    }
+}
+
+```
+
+记录性能监视信息类 
+
+```java
+package com.laolang.notespring.aopone;
+
+/**
+ * 记录性能监视信息
+ */
+public class MethodPerformance {
+
+    private long begin;
+
+    private long end;
+
+    private String serviceMethod;
+
+    public MethodPerformance(String serviceMethod) {
+        this.serviceMethod = serviceMethod;
+        this.begin = System.currentTimeMillis();
+    }
+
+    public void printPerformance(){
+        end = System.currentTimeMillis();
+        long elapse = end - begin;
+        System.out.println(serviceMethod + " 花费 " + elapse + " 毫秒");
+    }
+}
+
+```
+
+测试
+
+```java
+package com.laolang.notespring.aopone;
+
+import org.junit.Test;
+
+public class ForumServiceTest {
+
+    @Test
+    public void forumServiceTest(){
+        ForumService forumService = new ForumServiceImpl();
+        forumService.removeTopic(10);
+        forumService.removeForum(20);
+    }
+}
+
+```
+
+结果
+
+```shell
+begin monitor...
+模拟删除Topic记录：10
+end monitor...
+com.laolang.notespring.aopone.ForumServiceImpl. removeTopic 花费 20 毫秒
+begin monitor...
+模拟删除Forum记录：20
+end monitor...
+com.laolang.notespring.aopone.ForumServiceImpl. removeForum 花费 20 毫秒
+```
+
+当某个方法需要进行性能监视时，必须调整方法代码。可以通过代理的方式将业务类方法中开启和结束性能监视的横切代码从业务类中完全移除
+
+
+
+### 使用jdk动态代理
+
+将实现类中的性能监视代码移除
+
+```java
+package com.laolang.notespring.aoptwo;
+
+public class ForumServiceImpl implements ForumService{
+    @Override
+    public void removeTopic(int topicId) {
+        System.out.println("模拟删除Topic记录："+topicId);
+        try{
+            Thread.currentThread().sleep(20);
+        }catch (Exception e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void removeForum(int forumId) {
+        System.out.println("模拟删除Forum记录："+forumId);
+        try{
+            Thread.currentThread().sleep(20);
+        }catch (Exception e){
+            throw new RuntimeException(e);
+        }
+    }
+}
+
+```
+
+实现InvocationHandler接口
+
+```java
+package com.laolang.notespring.aoptwo;
+
+
+
+import com.laolang.notespring.aopone.PerformanceMonitor;
+
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+
+public class PerformanceHandler implements InvocationHandler {
+
+    // 被代理的目标对象
+    private Object target;
+
+    public PerformanceHandler(Object target) {
+        this.target = target;
+    }
+
+    /**
+     *
+     * @param proxy 最终生成的代理示例，一般不会用到
+     * @param method 被代理目标示例的某个具体方法，通过它可以发起目标示例方法的反射调用
+     * @param args 被代理示例某个方法的入参
+     * @return
+     * @throws Throwable
+     */
+    @Override
+    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+        PerformanceMonitor.begin(target.getClass().getName()+". "+method.getName());
+        Object obj = method.invoke(target,args);
+        PerformanceMonitor.end();
+        return obj;
+    }
+}
+
+```
+
+测试
+
+```java
+package com.laolang.notespring.aoptwo;
+
+import org.junit.Test;
+
+import java.lang.reflect.Proxy;
+
+public class ForumServiceTest {
+
+    @Test
+    public void forumServiceAopByJdkTest(){
+        // 希望被代理的目标业务类
+        ForumService target = new ForumServiceImpl();
+
+        // 根据编制了目标业务类逻辑和性能监视横切逻辑的InvocationHandler示例创建代理示例
+        PerformanceHandler handler = new PerformanceHandler(target);
+        ForumService proxy = (ForumService) Proxy.newProxyInstance(target.getClass().getClassLoader(),
+                target.getClass().getInterfaces(),handler);
+
+        // 调用代理实例
+        proxy.removeTopic(10);
+        proxy.removeForum(20);
+    }
+}
+
+```
+
+
+
+效果相同
+
+### CGLIB动态代理 
+
+代理创建器
+
+```java
+package com.laolang.notespring.aopthree;
+
+import com.laolang.notespring.aopone.PerformanceMonitor;
+import net.sf.cglib.proxy.Enhancer;
+import net.sf.cglib.proxy.MethodInterceptor;
+import net.sf.cglib.proxy.MethodProxy;
+
+import java.lang.reflect.Method;
+
+public class CglibProxy implements MethodInterceptor {
+    private Enhancer enhancer = new Enhancer();
+
+    public Object getProxy( Class clazz){
+        enhancer.setSuperclass(clazz);
+        enhancer.setCallback(this);
+        return enhancer.create();
+    }
+
+    @Override
+    public Object intercept(Object o, Method method, Object[] objects, MethodProxy methodProxy) throws Throwable {
+        PerformanceMonitor.begin(o.getClass().getName() + ". "+method.getName());
+        Object result = methodProxy.invokeSuper(o,objects);
+        PerformanceMonitor.end();
+        return result;
+    }
+}
+
+```
+
+测试
+
+```java
+package com.laolang.notespring.aopthree;
+
+
+import com.laolang.notespring.aoptwo.ForumServiceImpl;
+import org.junit.Test;
+
+public class CglibProxyTest {
+
+    @Test
+    public void cglibTest(){
+        CglibProxy proxy = new CglibProxy();
+        ForumServiceImpl forumService = (ForumServiceImpl) proxy.getProxy(ForumServiceImpl.class);
+        forumService.removeTopic(10);
+        forumService.removeForum(20);
+    }
+}
+
+```
+
+
+
+
 
