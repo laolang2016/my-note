@@ -1133,3 +1133,144 @@ public void componetTest(){
 }
 ```
 
+扫描配置
+
+resource-parrern
+
+context:include-filter
+
+context:excude-filter
+
+## 基于java配置
+
+## 基于groovy配置
+
+## 读取外部属性文件
+
+### 基本使用
+
+属性文件
+
+```properties
+user.id=1001
+user.nickName=xiaodaima
+user.userCode=u1001
+```
+
+xml 配置
+
+```xml
+<bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+    <!-- 允许JVM参数覆盖 -->
+    <property name="systemPropertiesModeName" value="SYSTEM_PROPERTIES_MODE_OVERRIDE" />
+    <!-- 忽略没有找到的资源文件 -->
+    <property name="ignoreResourceNotFound" value="true" />
+    <!--
+    如果配置文件中定义了多个 PropertyPlaceholderConfigurer ，
+    则通过该属性指定优先顺序， 默认值为：2147483647
+    -->
+    <property name="order" value="1" />
+    <!-- 属性文件编码格式。spring使用操作系统默认编码读取属性文件 -->
+    <property name="fileEncoding" value="utf-8" />
+    <!-- 导入一个配置文件 -->
+    <!--<property name="location" value="classpath:db-test.properties" />-->
+    <!-- 导入多个配置文件 -->
+    <property name="locations">
+        <list>
+            <value>classpath:db-test.properties</value>
+        </list>
+    </property>
+</bean>
+```
+
+### 简单使用
+
+```xml
+<context:property-placeholder location="classpath:user-test.properties" />
+```
+
+### 基于注解使用
+
+```java
+package com.laolang.notespring.po;
+
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+
+@Component
+public class DbInfo {
+
+    public DbInfo() {
+    }
+
+    @Override
+    public String toString() {
+        return "DbInfo{" +
+                "className='" + className + '\'' +
+                ", username='" + username + '\'' +
+                ", pwd='" + pwd + '\'' +
+                ", url='" + url + '\'' +
+                '}';
+    }
+
+    public String getClassName() {
+        return className;
+    }
+
+    public void setClassName(String className) {
+        this.className = className;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPwd() {
+        return pwd;
+    }
+
+    public void setPwd(String pwd) {
+        this.pwd = pwd;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+
+    @Value("${db.className}")
+    private String className;
+
+    @Value("${db.username}")
+    private String username;
+
+    @Value("${db.pwd}")
+    private String pwd;
+
+    @Value("${db.url}")
+    private String url;
+}
+
+```
+
+### 使用加密属性文件
+
+### 属性文件自身的引用
+
+### 引用bean的属性值
+
+## 国际化信息
+
+## 容器事件
+
+# aop 基础
+
