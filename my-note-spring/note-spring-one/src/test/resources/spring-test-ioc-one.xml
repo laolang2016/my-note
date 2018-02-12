@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:util="http://www.springframework.org/schema/util"
-       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
 
     <bean id="user" class="com.laolang.notespring.domain.User">
         <property name="id" value="1001" />
@@ -165,6 +166,37 @@
     <bean id="user19" class="com.laolang.notespring.factory.UserFactoryBean">
         <property name="userInfo" value="1001,u1001,xiaodaima" />
     </bean>
+
+    <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <!-- 允许JVM参数覆盖 -->
+        <property name="systemPropertiesModeName" value="SYSTEM_PROPERTIES_MODE_OVERRIDE" />
+        <!-- 忽略没有找到的资源文件 -->
+        <property name="ignoreResourceNotFound" value="true" />
+        <!--
+        如果配置文件中定义了多个 PropertyPlaceholderConfigurer ，
+        则通过该属性指定优先顺序， 默认值为：2147483647
+        -->
+        <property name="order" value="1" />
+        <!-- 属性文件编码格式。spring使用操作系统默认编码读取属性文件 -->
+        <property name="fileEncoding" value="utf-8" />
+        <!-- 导入一个配置文件 -->
+        <!--<property name="location" value="classpath:db-test.properties" />-->
+        <!-- 导入多个配置文件 -->
+        <property name="locations">
+            <list>
+                <value>classpath:db-test.properties</value>
+            </list>
+        </property>
+    </bean>
+
+
+
+    <bean id="user20" class="com.laolang.notespring.domain.User">
+        <property name="id" value="${user.id}" />
+        <property name="nickName" value="${user.nickName}" />
+        <property name="userCode" value="${user.userCode}" />
+    </bean>
+
 
 
 </beans>

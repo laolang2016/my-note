@@ -1029,3 +1029,107 @@ public void factoryBeanTest() throws Exception {
 }
 ```
 
+## 基于注解的配置
+
+spring 的注解包括：
+
+@Componet
+
+@Repository
+
+@Service
+
+@Controller
+
+者四个注解功能相同，只是为了标注类本身的用途
+
+### 配置扫描包
+
+java 代码
+
+```java
+package com.laolang.notespring.po;
+
+import org.springframework.stereotype.Component;
+
+@Component
+public class Student {
+
+    public Student() {
+    }
+
+    @Override
+    public String toString() {
+        return "Student{" +
+                "id=" + id +
+                ", userCode='" + userCode + '\'' +
+                ", nickName='" + nickName + '\'' +
+                ", pwd='" + pwd + '\'' +
+                '}';
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public String getUserCode() {
+        return userCode;
+    }
+
+    public void setUserCode(String userCode) {
+        this.userCode = userCode;
+    }
+
+    public String getNickName() {
+        return nickName;
+    }
+
+    public void setNickName(String nickName) {
+        this.nickName = nickName;
+    }
+
+    public String getPwd() {
+        return pwd;
+    }
+
+    public void setPwd(String pwd) {
+        this.pwd = pwd;
+    }
+
+    private Integer id;
+
+    private String userCode;
+
+    private String nickName;
+
+    private String pwd;
+}
+
+```
+
+xml 配置
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <context:component-scan base-package="com.laolang.notespring.po" />
+</beans>
+```
+
+测试
+
+```java
+@Test
+public void componetTest(){
+    Student student = context.getBean(Student.class);
+    assertNotNull(student);
+}
+```
+

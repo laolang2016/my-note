@@ -5,6 +5,7 @@ import com.laolang.notespring.domain.UserEmail;
 import com.laolang.notespring.domain.UserEmailLookup;
 import com.laolang.notespring.domain.UserEmailLookupByAware;
 import com.laolang.notespring.factory.UserFactoryBean;
+import com.laolang.notespring.po.DbInfo;
 import com.laolang.notespring.po.Student;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -330,5 +331,40 @@ public class SpringHelloWorldTest {
         Student student = context.getBean(Student.class);
         assertNotNull(student);
     }
+
+    @Test
+    public void propertiesTest01(){
+        User user = (User) context.getBean("user20");
+        assertNotNull(user);
+
+        assertNotNull(user.getId());
+        assertEquals(true , 1001 == user.getId());
+
+        assertNotNull(user.getNickName());
+        assertEquals("xiaodaima",user.getNickName());
+
+        assertNotNull(user.getUserCode());
+        assertEquals("u1001",user.getUserCode());
+    }
+
+    @Test
+    public void propertiesTest02(){
+        DbInfo dbInfo = context.getBean(DbInfo.class);
+        assertNotNull(dbInfo);
+
+        assertNotNull(dbInfo.getClassName());
+        assertEquals("mysql",dbInfo.getClassName());
+
+        assertNotNull(dbInfo.getPwd());
+        assertEquals("root",dbInfo.getPwd());
+
+        assertNotNull(dbInfo.getUsername());
+        assertEquals("root",dbInfo.getUsername());
+
+        assertNotNull(dbInfo.getUrl());
+        assertEquals("mysqlurl",dbInfo.getUrl());
+    }
+
+
 }
 
