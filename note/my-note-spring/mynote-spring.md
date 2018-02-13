@@ -1679,6 +1679,477 @@ public class CglibProxyTest {
 
 ```
 
+效果
+
+```shell
+begin monitor...
+模拟删除Topic记录：10
+end monitor...
+com.laolang.notespring.aoptwo.ForumServiceImpl$$EnhancerByCGLIB$$4a2aba90. removeTopic 花费 52 毫秒
+begin monitor...
+模拟删除Forum记录：20
+end monitor...
+com.laolang.notespring.aoptwo.ForumServiceImpl$$EnhancerByCGLIB$$4a2aba90. removeForum 花费 20 毫秒
+```
+
+
+
+### 小结
+
+上面的代码需要改进的地方
+
+* 目标类的所有方法都添加了性能监视横切逻辑
+* 通过硬编码的方式制定了织入横切逻辑的织入点
+* 手工编写代理实例的创建过程，无法通用
+
+CGLIB性能比jdk高，但是创建时间比jdk长
+
+对于singleton的代理对象或具有实例池的代理，因为无须频繁的创建代理对象，所以比较适合采用CGLIB，反之则采用jdk
+
+## 创建增强类型
+
+### 增强类型
+
+spring 支持的5种类型的增强
+
+* 前置增强：org.springframework.aop.BeforeAdvice。因为spring只支持犯法级的增强，所以MethodBeforeAdvice是目前可用的前置增强，表示在目标方法执行前实施增强，BeforeAdvice是为了将来版本扩展需要而定义的
+* 后置增强：org.springframework.aop.AfterReturningAdive
+* 环绕增强：org.aopallicance.intercept.MethodInterceptor
+* 异常抛出增强：org.springframework.aop.ThrowsAdvice
+* 引介增强：org.springramework.aop.IntroductionInterceptor，表示在目标类中添加一些新的方法和属性
+
+### 前置增强
+
+接口
+
+```java
+package com.laolang.notespring.aopfour;
+
+public interface Waiter {
+
+    void greetTo( String name );
+
+    void serveTo( String name );
+}
+
+```
+
+实现
+
+```java
+package com.laolang.notespring.aopfour;
+
+public class NaiveWaiter implements Waiter {
+    @Override
+    public void greetTo(String name) {
+        System.out.println("greet to + " + name + " ...");
+    }
+
+    @Override
+    public void serveTo(String name) {
+        System.out.println("serving to + " + name + " ...");
+    }
+}
+
+```
+
+增强
+
+```java
+package com.laolang.notespring.aopfour;
+
+import org.springframework.aop.MethodBeforeAdvice;
+
+import java.lang.reflect.Method;
+
+public class GreetingBeforeAdvice implements MethodBeforeAdvice {
+    @Override
+    public void before(Method method, Object[] objects, Object o) throws Throwable {
+        String clientName = (String) objects[0];
+        System.out.println("How are you! Mr."+clientName+".");
+    }
+}
+
+```
+
+测试
+
+```java
+package com.laolang.notespring.aopfour;
+
+import org.junit.Test;
+import org.springframework.aop.BeforeAdvice;
+import org.springframework.aop.framework.ProxyFactory;
+
+public class AdviceTest {
+
+
+    @Test
+    public void methodBeforeAdviceTest(){
+        Waiter target = new NaiveWaiter();
+        BeforeAdvice advice = new GreetingBeforeAdvice();
+
+        // spring 提供的代理工厂
+        ProxyFactory proxyFactory = new ProxyFactory();
+        // 设置代理目标
+        proxyFactory.setTarget(target);
+        // 为代理目标添加增强
+        proxyFactory.addAdvice(advice);
+
+        // 生成代理实例
+        Waiter proxy = (Waiter) proxyFactory.getProxy();
+        proxy.greetTo("xiaodaima");
+        proxy.serveTo("laolang");
+
+    }
+}
+
+```
+
+如果通过ProxyFactory的setInterfaces(Class[] interfaces)方法指定目标进口进行代理，则使用JdkDynamicAopProxy，如果针对类代理，则使用Cglib2AopProxy。
+
+此外，可以通过ProxyFactory.setOptimize(true)方法让ProxyFactory启动优化代理方式，这样针对几口的代理也会使用Cglib2AopProxy
+
+
+
+xml配置
+
+```xml
+<bean id="greetingBeforeAdvice" class="com.laolang.notespring.aopfour.GreetingBeforeAdvice" />
+
+<!-- 代理的目标对象 -->
+<bean id="target" class="com.laolang.notespring.aopfour.NaiveWaiter" />
+
+<bean id="waiter" class="org.springframework.aop.framework.ProxyFactoryBean">
+    <!-- 代理要实现的接口 -->
+    <property name="proxyInterfaces">
+        <list>
+            <value>com.laolang.notespring.aopfour.Waiter</value>
+        </list>
+    </property>
+    <!-- 需要织入目标对象的Bean列表，调用配置顺序对应调用顺序 -->
+    <property name="interceptorNames">
+        <array>
+            <value>greetingBeforeAdvice</value>
+        </array>
+    </property>
+    <property name="target" ref="target" />
+
+    <!-- 是否为单例，默认为 true  -->
+    <!--<property name="singleton" value="true" />-->
+    <!-- 设置为 true 时，强制使用CGLIB动态代理，对于singleton的代理，推荐使用CGLIB动态代理，其他作用域类型则使用JDK动态代理 -->
+    <!--<property name="optimize" value="true" />-->
+    <!-- 是否对类进行代理，当设置为true时，使用CGLIB动态代理 ，设置此属性后无须再设置 proxyInterfaces 属性，即使设置也会被忽略-->
+    <!--<property name="proxyTargetClass" value="true" />-->
+</bean>
+```
+
+测试
+
+```xml
+@Test
+public void methodBeforeAdviceTest02(){
+    ApplicationContext context = new ClassPathXmlApplicationContext("spring-test-contest.xml");
+    Waiter waiter = (Waiter) context.getBean("waiter");
+    waiter.greetTo("xiaodaima");
+    waiter.serveTo("laolang");
+}
+```
+
+### 后置增强
+
+增强
+
+```java
+package com.laolang.notespring.aopfour;
+
+import org.springframework.aop.AfterReturningAdvice;
+
+import java.lang.reflect.Method;
+
+public class GreetingAfterAdvice implements AfterReturningAdvice {
+    @Override
+    public void afterReturning(Object o, Method method, Object[] objects, Object o1) throws Throwable {
+        System.out.println("Please enjoy yourself!");
+    }
+}
+
+```
+
+xml 配置
+
+```xml
+<bean id="greetingBeforeAdvice" class="com.laolang.notespring.aopfour.GreetingBeforeAdvice" />
+<bean id="greetingAfterAdvice" class="com.laolang.notespring.aopfour.GreetingAfterAdvice" />
+<!-- 代理的目标对象 -->
+<bean id="target" class="com.laolang.notespring.aopfour.NaiveWaiter" />
+
+<bean id="waiter" class="org.springframework.aop.framework.ProxyFactoryBean">
+    <!-- 代理要实现的接口 -->
+    <property name="proxyInterfaces">
+        <list>
+            <value>com.laolang.notespring.aopfour.Waiter</value>
+        </list>
+    </property>
+    <!-- 需要织入目标对象的Bean列表，调用配置顺序对应调用顺序 -->
+    <property name="interceptorNames">
+        <list>
+            <value>greetingBeforeAdvice</value>
+            <value>greetingAfterAdvice</value>
+        </list>
+    </property>
+    <property name="target" ref="target" />
+
+    <!-- 是否为单例，默认为 true  -->
+    <!--<property name="singleton" value="true" />-->
+    <!-- 设置为 true 时，强制使用CGLIB动态代理，对于singleton的代理，推荐使用CGLIB动态代理，其他作用域类型则使用JDK动态代理 -->
+    <!--<property name="optimize" value="true" />-->
+    <!-- 是否对类进行代理，当设置为true时，使用CGLIB动态代理 ，设置此属性后无须再设置 proxyInterfaces 属性，即使设置也会被忽略-->
+    <!--<property name="proxyTargetClass" value="true" />-->
+</bean>
+```
+
+### 环绕增强
+
+增强
+
+```java
+package com.laolang.notespring.aopfour;
+
+import org.aopalliance.intercept.MethodInterceptor;
+import org.aopalliance.intercept.MethodInvocation;
+
+public class GreetingInterceptor implements MethodInterceptor {
+    @Override
+    public Object invoke(MethodInvocation methodInvocation) throws Throwable {
+        // 目标方法入参
+        Object[] args = methodInvocation.getArguments();
+        String clientName = (String) args[0];
+
+        // 在目标方法执行前调用
+        System.out.println("How are you! Mr." + clientName+".");
+
+        // 通过反射机制调用目标方法
+        Object o = methodInvocation.proceed();
+
+        // 在目标方法执行后调用
+        System.out.println("Please enjoy yourself!");
+
+        return o;
+    }
+}
+
+```
+
+xml 配置
+
+```xml
+<bean id="greetingInterceptor" class="com.laolang.notespring.aopfour.GreetingInterceptor" />
+<bean id="target2" class="com.laolang.notespring.aopfour.NaiveWaiter" />
+<bean id="waiter2" class="org.springframework.aop.framework.ProxyFactoryBean">
+    <property name="proxyInterfaces">
+        <list>
+            <value>com.laolang.notespring.aopfour.Waiter</value>
+        </list>
+    </property>
+    <property name="interceptorNames">
+        <list>
+            <value>greetingInterceptor</value>
+        </list>
+    </property>
+    <property name="target" ref="target2" />
+</bean>
+```
+
+测试
+
+```java
+@Test
+public void methodInterceptorTest(){
+    ApplicationContext context = new ClassPathXmlApplicationContext("spring-test-contest.xml");
+    Waiter waiter = (Waiter) context.getBean("waiter2");
+    waiter.greetTo("laolang");
+}
+```
+
+### 异常抛出增强
+
+抛出异常的类
+
+```java
+package com.laolang.notespring.aopfour;
+
+import java.sql.SQLException;
+
+public class ForumService {
+
+    public void removeForum( int forumId ){
+        throw new RuntimeException("运行异常");
+    }
+
+    public void updateForum(Object o ) throws SQLException {
+        throw new SQLException("数据库异常");
+    }
+}
+
+```
+
+增强
+
+```java
+package com.laolang.notespring.aopfour;
+
+import org.springframework.aop.ThrowsAdvice;
+
+import java.lang.reflect.Method;
+
+public class TransactionManager implements ThrowsAdvice {
+
+    public void afterThrowing(Method method, Object[] args, Object target, Exception e){
+        System.out.println("-----------");
+        System.out.println("method:"+method.getName());
+        System.out.println("抛出异常："+e.getMessage());
+        System.out.println("成功回滚事物");
+    }
+}
+
+```
+
+xml配置
+
+```xml
+<bean id="transactionManager" class="com.laolang.notespring.aopfour.TransactionManager" />
+<bean id="forumServiceTarget" class="com.laolang.notespring.aopfour.ForumService" />
+<bean id="forumService" class="org.springframework.aop.framework.ProxyFactoryBean">
+    <property name="interceptorNames">
+        <list>
+            <value>transactionManager</value>
+        </list>
+    </property>
+    <property name="target" ref="forumServiceTarget" />
+    <!-- 使用CGLIB代理 -->
+    <property name="proxyTargetClass" value="true" />
+</bean>
+```
+
+测试
+
+```java
+@Test(expected = SQLException.class)
+public void throsAdviceTest() throws SQLException {
+    ApplicationContext context = new ClassPathXmlApplicationContext("spring-test-contest.xml");
+    ForumService forumService = (ForumService) context.getBean("forumService");
+//        forumService.removeForum(1);
+    forumService.updateForum(null);
+}
+```
+
+ThrowsAdvice是一个标签接口，在运行期间spring使用反射机制自行判断，必须采用一下签名形式定义异常抛出的增强方法：
+
+```java
+void afterThrowing([Method method, Object[] args, Object target], Thrwoable)
+```
+
+前三个参数要么提供，要么不提供，最后一个是Throwable或其子类
+
+### 引介增强
+
+接口
+
+```java
+package com.laolang.notespring.aopfour;
+
+public interface Monitorable {
+    void setMonitorActive(boolean active);
+}
+
+```
+
+实现 
+
+```java
+package com.laolang.notespring.aopfour;
+
+import com.laolang.notespring.aopone.PerformanceMonitor;
+import org.aopalliance.intercept.MethodInvocation;
+import org.springframework.aop.support.DelegatingIntroductionInterceptor;
+
+public class ControllablePerformanceMonitor extends DelegatingIntroductionInterceptor implements Monitorable {
+
+    private ThreadLocal<Boolean> MonitorStatusMap = new ThreadLocal<Boolean>();
+
+    @Override
+    public void setMonitorActive(boolean active) {
+        MonitorStatusMap.set(active);
+    }
+
+    /**
+     * 拦截方法
+     * @param mi
+     * @return
+     * @throws Throwable
+     */
+    @Override
+    public Object invoke(MethodInvocation mi) throws Throwable {
+        Object o = null;
+        // 对于支持性能监视可控代理，通过判断其状态决定是否开启性能监控功能
+        if( MonitorStatusMap.get() != null && MonitorStatusMap.get() ){
+            PerformanceMonitor.begin(mi.getClass().getName() + "." + mi.getMethod().getName());
+            o = super.invoke(mi);
+            PerformanceMonitor.end();
+        }else{
+            o = super.invoke(mi);
+        }
+        return o;
+    }
+}
+
+```
+
+xml 配置
+
+```xml
+<bean id="pmonitor" class="com.laolang.notespring.aopfour.ControllablePerformanceMonitor"/>
+<bean id="forumServiceTarget2" class="com.laolang.notespring.aoptwo.ForumServiceImpl" />
+<bean id="forumService2" class="org.springframework.aop.framework.ProxyFactoryBean">
+    <property name="proxyInterfaces">
+        <list>
+            <value>com.laolang.notespring.aopfour.Monitorable</value>
+        </list>
+    </property>
+    <property name="interceptorNames">
+        <list>
+            <value>pmonitor</value>
+        </list>
+    </property>
+    <property name="target" ref="forumServiceTarget2" />
+    <!-- 引介增强一定要通过创建子类来生成代理，所以需要强制使用CGLIB，否则会报错 -->
+    <property name="proxyTargetClass" value="true" />
+</bean>
+```
+
+测试
+
+```java
+@Test
+public void delegatingIntroductionInterceptorTest(){
+    ApplicationContext context = new ClassPathXmlApplicationContext("spring-test-contest.xml");
+    com.laolang.notespring.aoptwo.ForumService forumService = (com.laolang.notespring.aoptwo.ForumService) context.getBean("forumService2");
+    // 默认未开启性能监视功能
+    forumService.removeTopic(10);
+    forumService.removeForum(20);
+
+    System.out.println("------------");
+
+    // 开启性能监视功能
+    Monitorable monitorable = (Monitorable) forumService;
+    monitorable.setMonitorActive(true);
+
+    forumService.removeTopic(10);
+    forumService.removeForum(20);
+}
+```
+
 
 
 

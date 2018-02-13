@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="greetingBeforeAdvice" class="com.laolang.notespring.aopfour.GreetingBeforeAdvice" />
+    <bean id="greetingAfterAdvice" class="com.laolang.notespring.aopfour.GreetingAfterAdvice" />
+    <!-- 代理的目标对象 -->
+    <bean id="target" class="com.laolang.notespring.aopfour.NaiveWaiter" />
+
+    <bean id="waiter" class="org.springframework.aop.framework.ProxyFactoryBean">
+        <!-- 代理要实现的接口 -->
+        <property name="proxyInterfaces">
+            <list>
+                <value>com.laolang.notespring.aopfour.Waiter</value>
+            </list>
+        </property>
+        <!-- 需要织入目标对象的Bean列表，调用配置顺序对应调用顺序 -->
+        <property name="interceptorNames">
+            <list>
+                <value>greetingBeforeAdvice</value>
+                <value>greetingAfterAdvice</value>
+            </list>
+        </property>
+        <property name="target" ref="target" />
+
+        <!-- 是否为单例，默认为 true  -->
+        <!--<property name="singleton" value="true" />-->
+        <!-- 设置为 true 时，强制使用CGLIB动态代理，对于singleton的代理，推荐使用CGLIB动态代理，其他作用域类型则使用JDK动态代理 -->
+        <!--<property name="optimize" value="true" />-->
+        <!-- 是否对类进行代理，当设置为true时，使用CGLIB动态代理 ，设置此属性后无须再设置 proxyInterfaces 属性，即使设置也会被忽略-->
+        <!--<property name="proxyTargetClass" value="true" />-->
+    </bean>
+
+    <bean id="greetingInterceptor" class="com.laolang.notespring.aopfour.GreetingInterceptor" />
+    <bean id="target2" class="com.laolang.notespring.aopfour.NaiveWaiter" />
+    <bean id="waiter2" class="org.springframework.aop.framework.ProxyFactoryBean">
+        <property name="proxyInterfaces">
+            <list>
+                <value>com.laolang.notespring.aopfour.Waiter</value>
+            </list>
+        </property>
+        <property name="interceptorNames">
+            <list>
+                <value>greetingInterceptor</value>
+            </list>
+        </property>
+        <property name="target" ref="target2" />
+    </bean>
+
+    <bean id="transactionManager" class="com.laolang.notespring.aopfour.TransactionManager" />
+    <bean id="forumServiceTarget" class="com.laolang.notespring.aopfour.ForumService" />
+    <bean id="forumService" class="org.springframework.aop.framework.ProxyFactoryBean">
+        <property name="interceptorNames">
+            <list>
+                <value>transactionManager</value>
+            </list>
+        </property>
+        <property name="target" ref="forumServiceTarget" />
+        <!-- 使用CGLIB代理 -->
+        <property name="proxyTargetClass" value="true" />
+    </bean>
+
+    <bean id="pmonitor" class="com.laolang.notespring.aopfour.ControllablePerformanceMonitor"/>
+    <bean id="forumServiceTarget2" class="com.laolang.notespring.aoptwo.ForumServiceImpl" />
+    <bean id="forumService2" class="org.springframework.aop.framework.ProxyFactoryBean">
+        <property name="proxyInterfaces">
+            <list>
+                <value>com.laolang.notespring.aopfour.Monitorable</value>
+            </list>
+        </property>
+        <property name="interceptorNames">
+            <list>
+                <value>pmonitor</value>
+            </list>
+        </property>
+        <property name="target" ref="forumServiceTarget2" />
+        <!-- 引介增强一定要通过创建子类来生成代理，所以需要强制使用CGLIB，否则会报错 -->
+        <property name="proxyTargetClass" value="true" />
+    </bean>
+</beans>
