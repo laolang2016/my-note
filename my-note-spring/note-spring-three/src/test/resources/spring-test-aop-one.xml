@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+    <bean id="waiterTarget" class="com.laolang.notespring.aopone.Waiter" />
+    <bean id="sellerTarget" class="com.laolang.notespring.aopone.Seller" />
+    <bean id="greetingBeforeAdvice" class="com.laolang.notespring.aopone.GreetingBeforeAdvice" />
+    <bean id="greetingAdvisor" class="com.laolang.notespring.aopone.GreetingAdvisor">
+        <!-- 向切面注入一个前置增强 -->
+        <property name="advice" ref="greetingBeforeAdvice" />
+        <!-- 切面织入时的顺序 -->
+        <!--<property name="order" value="1" />-->
+        <!-- 类匹配过滤器 -->
+        <!--<property name="classFilter" ref="" />-->
+    </bean>
+    <!-- 定义公共配置信息 -->
+    <bean id="parent" abstract="true" class="org.springframework.aop.framework.ProxyFactoryBean">
+        <property name="interceptorNames">
+            <list>
+                <value>greetingAdvisor</value>
+            </list>
+        </property>
+        <property name="proxyTargetClass" value="true" />
+    </bean>
+
+    <!-- waiter 代理 -->
+    <bean id="waiter" parent="parent">
+        <property name="target" ref="waiterTarget" />
+    </bean>
+    <!-- seller 代理 -->
+    <bean id="seller" parent="parent">
+        <property name="target" ref="sellerTarget" />
+    </bean>
+
+
+    <bean id="regexpAdvisor" class="org.springframework.aop.support.RegexpMethodPointcutAdvisor">
+        <property name="advice" ref="greetingBeforeAdvice" />
+        <!-- 定义多个匹配模式串，串之间是 或 的关系 -->
+        <property name="patterns">
+            <list>
+                <value>.*greet.*</value>
+            </list>
+        </property>
+        <!-- 定义一个匹配模式串 -->
+        <!--<property name="pattern" value="" />-->
+        <!-- 切面织入时对应的顺序 -->
+        <!--<property name="order" value="1" />-->
+    </bean>
+    <bean id="waiter1" class="org.springframework.aop.framework.ProxyFactoryBean">
+        <property name="interceptorNames">
+            <list>
+                <value>regexpAdvisor</value>
+            </list>
+        </property>
+        <property name="target" ref="waiterTarget" />
+        <property name="proxyTargetClass" value="true" />
+    </bean>
+
+
+    <bean id="dynamicAdvisor" class="org.springframework.aop.support.DefaultPointcutAdvisor">
+        <property name="pointcut">
+            <bean class="com.laolang.notespring.aopone.GreetingDynamicPointcut" />
+        </property>
+        <property name="advice">
+            <bean class="com.laolang.notespring.aopone.GreetingBeforeAdvice" />
+        </property>
+    </bean>
+
+    <bean id="waiter2" class="org.springframework.aop.framework.ProxyFactoryBean">
+        <property name="interceptorNames">
+            <list>
+                <value>dynamicAdvisor</value>
+            </list>
+        </property>
+        <property name="target" ref="waiterTarget" />
+        <property name="proxyTargetClass" value="true" />
+    </bean>
+
+    <bean id="waiter3" class="com.laolang.notespring.aopone.WaiterImpl" />
+    <bean class="com.laolang.notespring.aopone.PreGreetingAspect" />
+    <bean class="org.springframework.aop.aspectj.annotation.AnnotationAwareAspectJAutoProxyCreator" />
+
+    <aop:aspectj-autoproxy />
+    <bean id="waiter4" class="com.laolang.notespring.aopone.WaiterImpl" />
+    <bean class="com.laolang.notespring.aopone.PreGreetingAspect" />
+</beans>

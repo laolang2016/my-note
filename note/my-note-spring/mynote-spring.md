@@ -2150,6 +2150,474 @@ public void delegatingIntroductionInterceptorTest(){
 }
 ```
 
+## spring 创建切面
+
+spring 通过`org.springframework.aop.Poincut`接口描述切点
+
+spring支持两种方法匹配器，静态方法匹配器和动态方法匹配器。静态匹配器仅对方法名签名进行匹配，值判断一次，动态方法匹配器会在运行期间检查方法入参，每次都判断。
+
+spring支持注解切点和表达式切点，二者都使用AspectJ的切点表达式语言
+
+### 切点类型
+
+* 静态方法切点：`org.springfrmework.aop.support.StaticMethodMatcherPointcut`是静态方法切点的抽象基类，默认匹配所有的类。StaticMethodMatcherPoincut包括两个主要子类：
+
+NameMatchMethodPoincut : 简单字符串匹配方法签名
+
+AbstractRegexpMethodPoincut：正则表达式匹配方法签名
+
+* 动态方法切点：`org.springrramework.aop.support.DynamicMethodMatcherPointcut`是动态方法切点的抽象基类，默认情况下匹配所有的类
+* 注解切点：`org.springframework.aop.support.annotation.AnnotationMatchingPointcut`实现类表示注解切点，使用AnnotationMatchingPointcut支持在Bean中直接通过注解标签定义的切点
+* 表达式切点：`org.springframework.aop.supportExpressionPointcut`接口主要为ile支持spectJ切点表达式语法而定义的接口
+* 流程切点：`org.springframework.aop.support.ControlFlowPointcut`实现类表示控制流程切点。根据程序执行堆栈的信息查看目标方法是否由某一个方法直接或间接发起调用，以此判断是否为匹配的连接点。
+* 复合切点：`org.springframe.aop.support.ComposablePointcut`实现类是为创建多个切点提供的类，所有的方法都返回ComposablePointcut，这样就可以使用链接表达式对切点进行操作
+
+### 切面类型
+
+共三种：
+
+一般切面
+
+切点切面
+
+引介切面
+
+Advisor : 代表一般切面，代表的横切的连接点是所有目标类的所有方法
+
+PointcutAdvisor : 代表具有切点的切面，可以通过类、方法名及方位等信息灵活的定义切面
+
+IntroductionAdvisor : 引介切面，应用于类层面
+
+
+
+PointcutAdvisor 的 6 个具体实现类
+
+DefaultPointcutAdvisor : 唯一不支持的是引介切面类型，一班通过扩展该类实现自定义切面
+
+NameMatchMethodPointcutAdvisor : 通过该类可定义按方法名定义切点的切面
+
+RegexpMethodPointcutAdvisor : 按正则匹配方法名
+
+StticMethodMatcherPointcutAdvisor : 静态方法匹配器切点定义的切面，默认匹配所有的目标类
+
+AspectJExpressionPointcutAdvisor : 用于AspectJ切点表达是定义切点的切面
+
+AspectJPointcutdvisor ： 用于AspectJ语法定义切点的切面
+
+### 静态普通方法名匹配切面
+
+两个类
+
+```java
+package com.laolang.notespring.aopone;
+
+public class Waiter {
+
+    public void greetTo( String name ){
+        System.out.println("waiter greet to " + name + " ...");
+    }
+
+    public void serveTo( String name ){
+        System.out.println("waiter serving " + name + " ...");
+    }
+}
+
+```
+
+```java
+package com.laolang.notespring.aopone;
+
+public class Seller {
+
+    public void greetTo(String name ){
+        System.out.println("seller greet to " + name + " ...");
+    }
+}
+
+```
+
+增强
+
+```java
+package com.laolang.notespring.aopone;
+
+import org.springframework.aop.MethodBeforeAdvice;
+
+import java.lang.reflect.Method;
+
+/**
+ * 前置增强
+ */
+public class GreetingBeforeAdvice implements MethodBeforeAdvice {
+    @Override
+    public void before(Method method, Object[] objects, Object o) throws Throwable {
+        System.out.println(o.getClass().getName() + "." + method.getName());
+        String clientName = (String) objects[0];
+        System.out.println("How are you! Mr."+clientName+".");
+    }
+}
+
+```
+
+切面
+
+```java
+package com.laolang.notespring.aopone;
+
+import org.springframework.aop.ClassFilter;
+import org.springframework.aop.support.StaticMethodMatcherPointcutAdvisor;
+
+import java.lang.reflect.Method;
+
+/**
+ * 切面
+ * 静态方法匹配器切点定义的切面
+ */
+public class GreetingAdvisor extends StaticMethodMatcherPointcutAdvisor {
+
+
+    /**
+     * 切点方法匹配规则：方法名为：greetTo
+     * @param method
+     * @param aClass
+     * @return
+     */
+    @Override
+    public boolean matches(Method method, Class<?> aClass) {
+        return "greetTo".equals(method.getName());
+    }
+
+    /**
+     * 通过覆盖 getClassFilter ，仅匹配Waiter类及其子类
+     * 匹配规则：为Waiter的类或子类
+     * @return
+     */
+    @Override
+    public ClassFilter getClassFilter() {
+        return new ClassFilter() {
+            @Override
+            public boolean matches(Class<?> clazz) {
+                // 判断 Waiter 是否与clazz的类或接口相同
+                // 或Waiter是否为clazz的超类或超接口
+                return Waiter.class.isAssignableFrom(clazz);
+            }
+        };
+    }
+}
+
+```
+
+xml 配置
+
+```xml
+<bean id="waiterTarget" class="com.laolang.notespring.aopone.Waiter" />
+<bean id="sellerTarget" class="com.laolang.notespring.aopone.Seller" />
+<bean id="greetingBeforeAdvice" class="com.laolang.notespring.aopone.GreetingBeforeAdvice" />
+<bean id="greetingAdvisor" class="com.laolang.notespring.aopone.GreetingAdvisor">
+    <!-- 向切面注入一个前置增强 -->
+    <property name="advice" ref="greetingBeforeAdvice" />
+    <!-- 切面织入时的顺序 -->
+    <!--<property name="order" value="1" />-->
+    <!-- 类匹配过滤器 -->
+    <!--<property name="classFilter" ref="" />-->
+</bean>
+<!-- 定义公共配置信息 -->
+<bean id="parent" abstract="true" class="org.springframework.aop.framework.ProxyFactoryBean">
+    <property name="interceptorNames">
+        <list>
+            <value>greetingAdvisor</value>
+        </list>
+    </property>
+    <property name="proxyTargetClass" value="true" />
+</bean>
+
+<!-- waiter 代理 -->
+<bean id="waiter" parent="parent">
+    <property name="target" ref="waiterTarget" />
+</bean>
+<!-- seller 代理 -->
+<bean id="seller" parent="parent">
+    <property name="target" ref="sellerTarget" />
+</bean>
+```
+
+### 静态正则表达式方法匹配切面
+
+xml 配置
+
+```xml
+<bean id="regexpAdvisor" class="org.springframework.aop.support.RegexpMethodPointcutAdvisor">
+    <property name="advice" ref="greetingBeforeAdvice" />
+    <!-- 定义多个匹配模式串，串之间是 或 的关系 -->
+    <property name="patterns">
+        <list>
+            <value>.*greet.*</value>
+        </list>
+    </property>
+    <!-- 定义一个匹配模式串 -->
+    <!--<property name="pattern" value="" />-->
+    <!-- 切面织入时对应的顺序 -->
+    <!--<property name="order" value="1" />-->
+</bean>
+<bean id="waiter1" class="org.springframework.aop.framework.ProxyFactoryBean">
+    <property name="interceptorNames">
+        <list>
+            <value>regexpAdvisor</value>
+        </list>
+    </property>
+    <property name="target" ref="waiterTarget" />
+    <property name="proxyTargetClass" value="true" />
+</bean>
+```
+
+测试
+
+```java
+@Test
+public void regexpMethodPointcutAdvisorTest(){
+    ApplicationContext context = new ClassPathXmlApplicationContext("spring-test-context.xml");
+    Waiter waiter = (Waiter) context.getBean("waiter1");
+    waiter.greetTo("laolang");
+    waiter.serveTo("laolang");
+}
+```
+
+### 动态切面
+
+切面
+
+```java
+package com.laolang.notespring.aopone;
+
+import org.springframework.aop.ClassFilter;
+import org.springframework.aop.support.DynamicMethodMatcherPointcut;
+
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+
+public class GreetingDynamicPointcut extends DynamicMethodMatcherPointcut {
+
+    private static List<String> specialClientList = new ArrayList<String>();
+
+    static {
+        specialClientList.add("John");
+        specialClientList.add("Tom");
+    }
+
+    /**
+     * 对类进行静态切点检查
+     * @return
+     */
+    @Override
+    public ClassFilter getClassFilter() {
+        return new ClassFilter() {
+            @Override
+            public boolean matches(Class<?> aClass) {
+                System.out.println("调用 getClassFilter()对"+aClass.getName() + "做静态检查.");
+                return Waiter.class.isAssignableFrom(aClass);
+            }
+        };
+    }
+
+    /**
+     * 对方法进行静态切点检查
+     * @param method
+     * @param targetClass
+     * @return
+     */
+    @Override
+    public boolean matches(Method method, Class<?> targetClass) {
+        System.out.println("调用matches(Method,Class)"+targetClass.getName()+"."+method.getName()+"做静态检查");
+        return "greetTo".equals(method.getName());
+    }
+
+    /**
+     * 对方法进行动态方法检查
+     * @param method
+     * @param aClass
+     * @param objects
+     * @return
+     */
+    @Override
+    public boolean matches(Method method, Class<?> aClass, Object[] objects) {
+        System.out.println("调用matches(Method,Class,Object)"+aClass.getName()+"."+method.getName()+"做动态检查");
+        String clientName = (String) objects[0];
+        return specialClientList.contains(clientName);
+    }
+}
+
+```
+
+xml 配置
+
+```xml
+<bean id="dynamicAdvisor" class="org.springframework.aop.support.DefaultPointcutAdvisor">
+    <property name="pointcut">
+        <bean class="com.laolang.notespring.aopone.GreetingDynamicPointcut" />
+    </property>
+    <property name="advice">
+        <bean class="com.laolang.notespring.aopone.GreetingBeforeAdvice" />
+    </property>
+</bean>
+
+<bean id="waiter2" class="org.springframework.aop.framework.ProxyFactoryBean">
+    <property name="interceptorNames">
+        <list>
+            <value>dynamicAdvisor</value>
+        </list>
+    </property>
+    <property name="target" ref="waiterTarget" />
+    <property name="proxyTargetClass" value="true" />
+</bean>
+```
+
+测试
+
+```java
+@Test
+public void dynamicMethodMatcherPointcutTest(){
+    ApplicationContext context = new ClassPathXmlApplicationContext("spring-test-context.xml");
+    Waiter waiter = (Waiter) context.getBean("waiter2");
+    waiter.serveTo("Peter");
+    waiter.greetTo("Peter");
+    waiter.serveTo("John");
+    waiter.greetTo("John");
+}
+```
+
+在创建代理时，对目标类的每个连接点使用静态切点检查，如果静态切点检查是匹配的，才会在运行时进行动态切点检查。
+
+### 流程切面
+
+### 复合切点切面
+
+### 引介切面
+
+## 自动创建代理
+
+## aop 无法增强的方法
+
+# aop 基于 @AspectJ 和 Schema
+
+## pom
+
+```xml
+<dependency>
+    <groupId>org.springframework</groupId>
+    <artifactId>spring-asm</artifactId>
+    <version>3.1.4.RELEASE</version>
+</dependency>
+
+
+<!-- aspectj -->
+<dependency>
+    <groupId>org.aspectj</groupId>
+    <artifactId>aspectjweaver</artifactId>
+    <version>${aspectj.version}</version>
+</dependency>
+<dependency>
+    <groupId>org.aspectj</groupId>
+    <artifactId>aspectjtools</artifactId>
+    <version>${aspectj.version}</version>
+</dependency>
+```
+
+## aspectj 的简单使用
+
+接口
+
+```java
+package com.laolang.notespring.aopone;
+
+public interface IWaiter {
+
+    void greetTo( String name );
+
+    void serveTo( String name );
+}
+
+```
+
+实现类
+
+```java
+package com.laolang.notespring.aopone;
+
+public class WaiterImpl implements IWaiter {
+    @Override
+    public void greetTo(String name) {
+        System.out.println("greet to " + name + " ...");
+    }
+
+    @Override
+    public void serveTo(String name) {
+        System.out.println("serving to " + name + " ...");
+    }
+}
+
+```
+
+aspectj 切面
+
+```java
+package com.laolang.notespring.aopone;
+
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
+
+@Aspect
+public class PreGreetingAspect {
+
+    @Before("execution(* greetTo(..))")
+    public void beforeGreeting(){
+        System.out.println("How are you!");
+    }
+}
+
+```
+
+测试
+
+```java
+@Test
+public void aspectTest01(){
+    IWaiter target = new WaiterImpl();
+
+    AspectJProxyFactory factory = new AspectJProxyFactory();
+
+    // 设置目标对象
+    factory.setTarget(target);
+
+    // 添加切面类
+    factory.addAspect(PreGreetingAspect.class);
+
+    // 生成织入切面的代理对象
+    IWaiter proxy = factory.getProxy();
+
+    proxy.greetTo("laolang");
+    proxy.serveTo("laolang");
+}
+```
+
+## 通过配置使用aspectj切面
+
+```xml
+<bean id="waiter3" class="com.laolang.notespring.aopone.WaiterImpl" />
+<bean class="com.laolang.notespring.aopone.PreGreetingAspect" />
+<bean class="org.springframework.aop.aspectj.annotation.AnnotationAwareAspectJAutoProxyCreator" />
+
+<aop:aspectj-autoproxy />
+<bean id="waiter4" class="com.laolang.notespring.aopone.WaiterImpl" />
+<bean class="com.laolang.notespring.aopone.PreGreetingAspect" />
+```
+
+## aspectj 语法基础
+
+## 基于Schema配置切面
+
+# spel
+
 
 
 
